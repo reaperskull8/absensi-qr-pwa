@@ -95,23 +95,26 @@ function addAttendance(id){
   renderTable();
 }
 
-// QR scanner
-function onScanSuccess(decodedText){ addAttendance(decodedText.trim()); }
-document.getElementById("startBtn").addEventListener("click",()=>{
-  if(scannerStarted) return;
-  scannerStarted=true;
+// QR scanner init after DOM ready & button click
+document.addEventListener("DOMContentLoaded", ()=>{
+  renderTable();
+  const startBtn = document.getElementById("startBtn");
+  startBtn.addEventListener("click",()=>{
+    if(scannerStarted) return;
+    scannerStarted = true;
 
-  // unlock audio
-  ["audio-success","audio-info","audio-error"].forEach(id=>{
-    const a=document.getElementById(id); a.play().then(()=>a.pause()).catch(()=>{});
+    // unlock audio
+    ["audio-success","audio-info","audio-error"].forEach(id=>{
+      const a=document.getElementById(id); a.play().then(()=>a.pause()).catch(()=>{});
+    });
+
+    const html5QrcodeScanner = new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
+    html5QrcodeScanner.render(onScanSuccess);
+
+    startBtn.style.display = "none";
+    setStatus("🔍 Mulai scan QR Code");
   });
-
-  const html5QrcodeScanner = new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
-  html5QrcodeScanner.render(onScanSuccess);
-
-  document.getElementById("startBtn").style.display="none";
-  setStatus("🔍 Mulai scan QR Code");
 });
 
-// Init
-renderTable();
+// Callback QR
+function onScanSuccess(decodedText){ addAttendance(decodedText.trim()); }
