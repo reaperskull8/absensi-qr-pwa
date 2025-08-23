@@ -95,25 +95,18 @@ function addAttendance(id){
   renderTable();
 }
 
-// QR scanner init after DOM ready & button click
 document.addEventListener("DOMContentLoaded", ()=>{
   renderTable();
-  const startBtn = document.getElementById("startBtn");
-  startBtn.addEventListener("click",()=>{
-    if(scannerStarted) return;
-    scannerStarted = true;
-
-    // unlock audio
-    ["audio-success","audio-info","audio-error"].forEach(id=>{
-      const a=document.getElementById(id); a.play().then(()=>a.pause()).catch(()=>{});
-    });
-
-    const html5QrcodeScanner = new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
-    html5QrcodeScanner.render(onScanSuccess);
-
-    startBtn.style.display = "none";
-    setStatus("🔍 Mulai scan QR Code");
+  
+  // unlock audio
+  ["audio-success","audio-info","audio-error"].forEach(id=>{
+    const a=document.getElementById(id); a.play().then(()=>a.pause()).catch(()=>{});
   });
+
+  const html5QrcodeScanner = new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
+  html5QrcodeScanner.render(onScanSuccess);
+
+  setStatus("🔍 Mulai scan QR Code");
 });
 
 // Callback QR
