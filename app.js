@@ -1,13 +1,13 @@
 let attendance = JSON.parse(localStorage.getItem("attendance")) || [];
 const statusEl = document.getElementById("status");
+let scannerStarted = false;
 
-// Audio
+// Audio helper
 function playAudio(type) {
-  document.getElementById("audio-" + type).play();
+  const a = document.getElementById("audio-" + type);
+  a.play().catch(()=>{}); 
 }
-function setStatus(msg) {
-  statusEl.textContent = msg;
-}
+function setStatus(msg) { statusEl.textContent = msg; }
 
 // Util waktu
 function minutesDiff(t1, t2) {
@@ -24,80 +24,69 @@ function isWithinTimeRange(start, end) {
   return now >= startTime && now <= endTime;
 }
 
-// Simpan & render tabel
-function saveAttendance() {
-  localStorage.setItem("attendance", JSON.stringify(attendance));
-}
+// Save & render
+function saveAttendance() { localStorage.setItem("attendance", JSON.stringify(attendance)); }
 function renderTable() {
   const tbody = document.querySelector("#attendanceTable tbody");
   tbody.innerHTML = "";
-  attendance.forEach((rec, i) => {
+  attendance.forEach((r,i)=>{
     const row = `<tr>
-      <td>${rec.id}</td>
-      <td>${rec.tanggal}</td>
-      <td>${rec.jamMasuk || "-"}</td>
-      <td>${rec.jamPulang || "-"}</td>
-      <td>${rec.lemburMasuk || "-"}</td>
-      <td>${rec.lemburPulang || "-"}</td>
+      <td>${r.id}</td>
+      <td>${r.tanggal}</td>
+      <td>${r.jamMasuk||"-"}</td>
+      <td>${r.jamPulang||"-"}</td>
+      <td>${r.lemburMasuk||"-"}</td>
+      <td>${r.lemburPulang||"-"}</td>
       <td><button onclick="hapus(${i})">Hapus</button></td>
     </tr>`;
     tbody.insertAdjacentHTML("beforeend", row);
   });
 }
-function hapus(i) {
-  attendance.splice(i, 1);
-  saveAttendance();
-  renderTable();
-}
+function hapus(i){ attendance.splice(i,1); saveAttendance(); renderTable(); }
 
-// Aturan absensi
-function addAttendance(id) {
-  const today = new Date().toISOString().slice(0, 10);
-  const now = new Date().toTimeString().slice(0, 5);
+// Absensi rules
+function addAttendance(id){
+  const today = new Date().toISOString().slice(0,10);
+  const now = new Date().toTimeString().slice(0,5);
+  let record = attendance.find(r=>r.id===id && r.tanggal===today);
 
-  let record = attendance.find(r => r.id === id && r.tanggal === today);
-
-  if (!record) {
-    if (!isWithinTimeRange("07:30", "09:00")) {
+  if(!record){
+    if(!isWithinTimeRange("07:30","09:00")){
       setStatus(`❌ ${id} hanya bisa absen masuk 07:30–09:00`);
-      playAudio("error");
-      return;
+      playAudio("error"); return;
     }
-    attendance.push({ id, tanggal: today, jamMasuk: now, jamPulang: "", lemburMasuk: "", lemburPulang: "" });
+    attendance.push({id,tanggal:today,jamMasuk:now,jamPulang:"",lemburMasuk:"",lemburPulang:""});
     setStatus(`✅ ${id} masuk ${now} tercatat`);
     playAudio("success");
 
-  } else if (!record.jamPulang) {
-    if (!isWithinTimeRange("17:00", "20:00")) {
+  }else if(!record.jamPulang){
+    if(!isWithinTimeRange("17:00","20:00")){
       setStatus(`❌ ${id} hanya bisa absen pulang 17:00–20:00`);
-      playAudio("error");
-      return;
+      playAudio("error"); return;
     }
     record.jamPulang = now;
     setStatus(`✅ ${id} pulang ${now} tercatat`);
     playAudio("success");
 
-  } else if (!record.lemburMasuk) {
-    if (minutesDiff(record.jamPulang, now) < 60) {
+  }else if(!record.lemburMasuk){
+    if(minutesDiff(record.jamPulang,now)<60){
       setStatus(`❌ ${id} lembur masuk minimal 60 menit setelah jam pulang`);
-      playAudio("error");
-      return;
+      playAudio("error"); return;
     }
     record.lemburMasuk = now;
     setStatus(`✅ ${id} lembur masuk ${now} tercatat`);
     playAudio("success");
 
-  } else if (!record.lemburPulang) {
-    if (minutesDiff(record.lemburMasuk, now) < 120) {
+  }else if(!record.lemburPulang){
+    if(minutesDiff(record.lemburMasuk,now)<120){
       setStatus(`❌ ${id} lembur pulang minimal 2 jam setelah lembur masuk`);
-      playAudio("error");
-      return;
+      playAudio("error"); return;
     }
     record.lemburPulang = now;
     setStatus(`✅ ${id} lembur pulang ${now} tercatat`);
     playAudio("success");
 
-  } else {
+  }else{
     setStatus(`ℹ️ ${id} absensi hari ini sudah lengkap`);
     playAudio("info");
   }
@@ -106,12 +95,23 @@ function addAttendance(id) {
   renderTable();
 }
 
-// QR Scanner
-function onScanSuccess(decodedText) {
-  addAttendance(decodedText.trim());
-}
-const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-html5QrcodeScanner.render(onScanSuccess);
+// QR scanner
+function onScanSuccess(decodedText){ addAttendance(decodedText.trim()); }
+document.getElementById("startBtn").addEventListener("click",()=>{
+  if(scannerStarted) return;
+  scannerStarted=true;
+
+  // unlock audio
+  ["audio-success","audio-info","audio-error"].forEach(id=>{
+    const a=document.getElementById(id); a.play().then(()=>a.pause()).catch(()=>{});
+  });
+
+  const html5QrcodeScanner = new Html5QrcodeScanner("reader",{fps:10,qrbox:250});
+  html5QrcodeScanner.render(onScanSuccess);
+
+  document.getElementById("startBtn").style.display="none";
+  setStatus("🔍 Mulai scan QR Code");
+});
 
 // Init
 renderTable();
