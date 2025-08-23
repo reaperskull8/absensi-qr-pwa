@@ -5,7 +5,9 @@ const karyawanDB = {
   "K003": "Holik",
   "K004": "Ican",
   "K005": "Junaidi",
-  "K006": "Liwa"
+  "K006": "Liwa",
+  "K007": "Bambang Irawan",
+  "K008": "Rusik"
 };
 
 // Load data dari localStorage
