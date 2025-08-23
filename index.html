@@ -3,45 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Absensi QR Offline</title>
+  <title>Absensi QR PWA</title>
   <link rel="manifest" href="manifest.json">
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script defer src="script.js"></script>
   <style>
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #000; padding: 6px; text-align: center; }
-    button { margin: 4px 2px; }
-    #reader { max-width: 420px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #reader { width: 300px; margin: auto; }
+    table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+    table, th, td { border: 1px solid #999; padding: 6px; text-align: center; }
+    th { background: #eee; }
+    .status { margin-top: 10px; font-weight: bold; text-align:center; }
+    #startBtn { display:block; margin: 10px auto; padding: 8px 16px; font-size: 16px; }
   </style>
 </head>
 <body>
-  <h1>📋 Absensi QR Offline</h1>
-
+  <h2>Absensi QR Code</h2>
+  <button id="startBtn">▶️ Mulai Absensi</button>
   <div id="reader"></div>
-  <p id="status">Scan QR karyawan...</p>
+  <div class="status" id="status">Klik tombol “Mulai Absensi” terlebih dahulu</div>
 
-  <!-- audio feedback -->
-  <audio id="audioSuccess" src="audio/success.mp3" preload="auto"></audio>
-  <audio id="audioInfo"    src="audio/info.mp3"    preload="auto"></audio>
-  <audio id="audioError"   src="audio/error.mp3"   preload="auto"></audio>
-
-  <h2>Daftar Hadir</h2>
-  <table>
+  <table id="attendanceTable">
     <thead>
       <tr>
-        <th>ID</th><th>Tanggal</th>
-        <th>Jam Masuk</th><th>Jam Pulang</th>
-        <th>Lembur Masuk</th><th>Lembur Pulang</th>
+        <th>ID</th>
+        <th>Tanggal</th>
+        <th>Jam Masuk</th>
+        <th>Jam Pulang</th>
+        <th>Lembur Masuk</th>
+        <th>Lembur Pulang</th>
         <th>Aksi</th>
       </tr>
     </thead>
-    <tbody id="attendance"></tbody>
+    <tbody></tbody>
   </table>
 
-  <div>
-    <button onclick="exportCSV()">⬇️ Export CSV</button>
-    <button onclick="clearToday()" title="Hapus semua data tanggal hari ini">🧹 Clear Hari Ini</button>
-  </div>
-
-  <script src="libs/html5-qrcode.min.js"></script>
-  <script src="app.js"></script>
+  <!-- Audio Feedback -->
+  <audio id="audio-success" src="audio/success.mp3"></audio>
+  <audio id="audio-info" src="audio/info.mp3"></audio>
+  <audio id="audio-error" src="audio/error.mp3"></audio>
 </body>
 </html>
