@@ -19,7 +19,6 @@ function renderTable() {
   attendance.forEach((row, index) => {
     tbody.innerHTML += `<tr>
       <td>${row.id}</td>
-      <td>${row.nama}</td>
       <td>${row.tanggal}</td>
       <td>${row.jamMasuk || ""}</td>
       <td>${row.jamPulang || ""}</td>
@@ -34,7 +33,7 @@ function renderTable() {
 }
 
 function addAttendance(id) {
-  const nama = karyawanDB[id] || "Nama Tidak Dikenal";
+  const nama = karyawanDB[id]
   const today = new Date().toLocaleDateString();
   let record = attendance.find(r => r.id === id && r.tanggal === today);
 
@@ -90,13 +89,23 @@ function exportCSV() {
   a.click();
 }
 
-// Setup scanner
+// Setup scanner dengan cooldown
 function startScanner() {
   const html5QrCode = new Html5Qrcode("reader");
   html5QrCode.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
-    decodedText => { addAttendance(decodedText); }
+    decodedText => {
+      if (scanCooldown) return; // skip jika masih dalam cooldown
+
+      addAttendance(decodedText);
+
+      // aktifkan cooldown 3 detik
+      scanCooldown = true;
+      setTimeout(() => {
+        scanCooldown = false;
+      }, 3000); // 3000ms = 3 detik
+    }
   );
 }
 
