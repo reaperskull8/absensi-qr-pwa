@@ -1,17 +1,5 @@
-// Database nama karyawan
-const karyawanDB = {
-  "K001": "Ahmad Noval",
-  "K002": "Ferry",
-  "K003": "Holik",
-  "K004": "Ican",
-  "K005": "Junaidi",
-  "K006": "Liwa",
-  "K007": "Bambang Irawan",
-  "K008": "Rusik"
-};
-
-// Load data dari localStorage
 let attendance = JSON.parse(localStorage.getItem("absensi")) || [];
+let scanCooldown = false; // flag jeda scan
 
 function renderTable() {
   const tbody = document.getElementById("attendance");
@@ -33,26 +21,24 @@ function renderTable() {
 }
 
 function addAttendance(id) {
-  const nama = karyawanDB[id]
   const today = new Date().toLocaleDateString();
   let record = attendance.find(r => r.id === id && r.tanggal === today);
-
   const now = new Date().toLocaleTimeString();
 
   if (!record) {
     attendance.push({
-      id, nama, tanggal: today,
+      id, tanggal: today,
       jamMasuk: now,
       jamPulang: "",
       lemburMasuk: "",
       lemburPulang: ""
     });
-    document.getElementById("status").innerText = `✅ ${nama} jam masuk tercatat`;
+    document.getElementById("status").innerText = `✅ ${id} jam masuk tercatat`;
   } else if (!record.jamPulang) {
     record.jamPulang = now;
-    document.getElementById("status").innerText = `✅ ${nama} jam pulang tercatat`;
+    document.getElementById("status").innerText = `✅ ${id} jam pulang tercatat`;
   } else {
-    document.getElementById("status").innerText = `ℹ️ ${nama} sudah absen pulang`;
+    document.getElementById("status").innerText = `ℹ️ ${id} sudah absen pulang`;
   }
 
   localStorage.setItem("absensi", JSON.stringify(attendance));
@@ -78,9 +64,9 @@ function deleteRow(index) {
 }
 
 function exportCSV() {
-  let csv = "ID,Nama,Tanggal,Jam Masuk,Jam Pulang,Lembur Masuk,Lembur Pulang\n";
+  let csv = "ID,Tanggal,Jam Masuk,Jam Pulang,Lembur Masuk,Lembur Pulang\n";
   attendance.forEach(row => {
-    csv += `${row.id},${row.nama},${row.tanggal},${row.jamMasuk || ""},${row.jamPulang || ""},${row.lemburMasuk || ""},${row.lemburPulang || ""}\n`;
+    csv += `${row.id},${row.tanggal},${row.jamMasuk || ""},${row.jamPulang || ""},${row.lemburMasuk || ""},${row.lemburPulang || ""}\n`;
   });
   const blob = new Blob([csv], { type: "text/csv" });
   const a = document.createElement("a");
@@ -89,22 +75,16 @@ function exportCSV() {
   a.click();
 }
 
-// Setup scanner dengan cooldown
 function startScanner() {
   const html5QrCode = new Html5Qrcode("reader");
   html5QrCode.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
     decodedText => {
-      if (scanCooldown) return; // skip jika masih dalam cooldown
-
+      if (scanCooldown) return;
       addAttendance(decodedText);
-
-      // aktifkan cooldown 3 detik
       scanCooldown = true;
-      setTimeout(() => {
-        scanCooldown = false;
-      }, 3000); // 3000ms = 3 detik
+      setTimeout(() => { scanCooldown = false; }, 3000); // jeda 3 detik
     }
   );
 }
