@@ -1,101 +1,132 @@
-let lastScanTime = 0;
+// === CONFIG ===
+// whitelist ID (opsional)
+const validIds = null; // atau new Set(["K001","K002"]);
+
+// state
 let attendance = JSON.parse(localStorage.getItem("absensi")) || [];
+let scanCooldown = false;
 
-// 🔊 fungsi untuk mainkan audio
-function playAudio(type) {
-  if (type === "success") document.getElementById("audioSuccess").play();
-  if (type === "error") document.getElementById("audioError").play();
-  if (type === "info") document.getElementById("audioInfo").play();
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
-
-// 📝 fungsi untuk tambah absensi
-function addAttendance(id) {
-  const nowTime = new Date().getTime();
-  if (nowTime - lastScanTime < 3000) {
-    document.getElementById("status").innerText =
-      "⚠️ Tunggu 3 detik sebelum scan lagi!";
-    playAudio("error");
-    return;
-  }
-  lastScanTime = nowTime;
-
-  const today = new Date().toLocaleDateString();
-  const now = new Date().toLocaleTimeString();
-
-  // cari record berdasarkan id + tanggal
-  let record = attendance.find(r => r.id === id && r.tanggal === today);
-
-  if (!record) {
-    // record baru
-    record = {
-      id,
-      tanggal: today,
-      jamMasuk: now,
-      jamPulang: "",
-      lemburMasuk: "",
-      lemburPulang: ""
-    };
-    attendance.push(record);
-    document.getElementById("status").innerText = `✅ ${id} jam masuk tercatat`;
-    playAudio("success");
-  } else if (!record.jamPulang) {
-    record.jamPulang = now;
-    document.getElementById("status").innerText = `✅ ${id} jam pulang tercatat`;
-    playAudio("success");
-  } else if (!record.lemburMasuk) {
-    record.lemburMasuk = now;
-    document.getElementById("status").innerText = `✅ ${id} lembur masuk tercatat`;
-    playAudio("success");
-  } else if (!record.lemburPulang) {
-    record.lemburPulang = now;
-    document.getElementById("status").innerText = `✅ ${id} lembur pulang tercatat`;
-    playAudio("success");
-  } else {
-    document.getElementById("status").innerText = `ℹ️ ${id} sudah lengkap absen hari ini`;
-    playAudio("info");
-  }
-
-  // simpan dan render tabel
+function timeStr() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
+}
+function save() {
   localStorage.setItem("absensi", JSON.stringify(attendance));
-  renderTable();
+}
+function setStatus(msg) {
+  document.getElementById("status").innerText = msg;
+}
+function playAudio(type) {
+  const el = document.getElementById(type === "success" ? "audioSuccess" : type === "info" ? "audioInfo" : "audioError");
+  if (el) el.play().catch(()=>{});
+}
+function isValidId(id) {
+  if (!id || typeof id !== "string") return false;
+  return validIds ? validIds.has(id.trim()) : true;
 }
 
-// 📊 render tabel absensi
 function renderTable() {
-  const tbody = document.getElementById("data-absen");
+  const tbody = document.getElementById("attendance");
   tbody.innerHTML = "";
   attendance.forEach((r, i) => {
-    let row = `
+    tbody.innerHTML += `
       <tr>
-        <td>${i + 1}</td>
-        <td>${r.id}</td>
-        <td>${r.tanggal}</td>
-        <td>${r.jamMasuk || "-"}</td>
-        <td>${r.jamPulang || "-"}</td>
-        <td>${r.lemburMasuk || "-"}</td>
-        <td>${r.lemburPulang || "-"}</td>
-      </tr>
-    `;
-    tbody.innerHTML += row;
+        <td>${r.id}</td><td>${r.tanggal}</td><td>${r.jamMasuk}</td><td>${r.jamPulang}</td>
+        <td>${r.lemburMasuk}</td><td>${r.lemburPulang}</td>
+        <td>
+          <button onclick="editRow(${i})">Edit</button>
+          <button onclick="deleteRow(${i})">Hapus</button>
+        </td>
+      </tr>`;
   });
 }
 
-// 🚀 setup QR scanner
-function onScanSuccess(decodedText, decodedResult) {
-  addAttendance(decodedText); // panggil absensi
+function addAttendance(id) {
+  if (!isValidId(id)) {
+    setStatus(`❌ ID tidak valid: ${id}`);
+    playAudio("error");
+    return;
+  }
+  const tgl = todayStr(), now = timeStr();
+  let rec = attendance.find(r => r.id === id && r.tanggal === tgl);
+  if (!rec) {
+    rec = { id, tanggal:tgl, jamMasuk: now, jamPulang:"", lemburMasuk:"", lemburPulang:"" };
+    attendance.push(rec);
+    setStatus(`✅ ${id} masuk ${now}`);
+    playAudio("success");
+  } else if (!rec.jamPulang) {
+    rec.jamPulang = now;
+    setStatus(`✅ ${id} pulang ${now}`);
+    playAudio("success");
+  } else if (!rec.lemburMasuk) {
+    rec.lemburMasuk = now;
+    setStatus(`✅ ${id} lembur masuk ${now}`);
+    playAudio("success");
+  } else if (!rec.lemburPulang) {
+    rec.lemburPulang = now;
+    setStatus(`✅ ${id} lembur pulang ${now}`);
+    playAudio("success");
+  } else {
+    setStatus(`ℹ️ ${id} sudah lengkap hari ini`);
+    playAudio("info");
+  }
+  save(); renderTable();
 }
 
-function onScanFailure(error) {
-  // bisa diabaikan, biar ga spam
-  // console.warn(`Scan gagal: ${error}`);
+function editRow(i) {
+  const r = attendance[i];
+  r.jamMasuk = prompt("Masuk:", r.jamMasuk) || r.jamMasuk;
+  r.jamPulang = prompt("Pulang:", r.jamPulang) || r.jamPulang;
+  r.lemburMasuk = prompt("Lembur Masuk:", r.lemburMasuk) || r.lemburMasuk;
+  r.lemburPulang = prompt("Lembur Pulang:", r.lemburPulang) || r.lemburPulang;
+  save(); renderTable();
+}
+function deleteRow(i) {
+  if (confirm("Hapus baris ini?")) {
+    attendance.splice(i,1);
+    save(); renderTable();
+  }
+}
+function clearToday() {
+  const tgl = todayStr();
+  if (confirm(`Hapus semua data tanggal ${tgl}?`)) {
+    attendance = attendance.filter(r=>r.tanggal !== tgl);
+    save(); renderTable();
+  }
+}
+function exportCSV() {
+  let csv = "ID,Tanggal,Masuk,Pulang,Lembur Masuk,Lembur Pulang\n";
+  attendance.forEach(r => {
+    csv += `${r.id},${r.tanggal},${r.jamMasuk},${r.jamPulang},${r.lemburMasuk},${r.lemburPulang}\n`;
+  });
+  const blob = new Blob([csv], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "absensi.csv";
+  a.click();
 }
 
-window.onload = function () {
+function startScanner() {
+  const html5QrCode = new Html5Qrcode("reader");
+  html5QrCode.start(
+    { facingMode:"environment" },
+    { fps:10, qrbox:250 },
+    txt => {
+      if (scanCooldown) return;
+      scanCooldown = true;
+      addAttendance(txt.trim());
+      setTimeout(() => scanCooldown = false, 3000);
+    },
+    _err => {}
+  ).catch(e => console.error(e));
+}
+
+window.onload = () => {
   renderTable();
-
-  let html5QrcodeScanner = new Html5QrcodeScanner(
-    "reader",
-    { fps: 10, qrbox: 250 }
-  );
-  html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("service-worker.js");
+  startScanner();
 };
