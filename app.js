@@ -1,3 +1,13 @@
+// Database nama karyawan
+const karyawanDB = {
+  "K001": "Ahmad Noval",
+  "K002": "Ferry",
+  "K003": "Holik",
+  "K004": "Ican",
+  "K005": "Junaidi",
+  "K006": "Liwa"
+};
+
 // Load data dari localStorage
 let attendance = JSON.parse(localStorage.getItem("absensi")) || [];
 
